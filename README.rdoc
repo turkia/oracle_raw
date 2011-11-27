@@ -24,7 +24,7 @@ Tests are not comprehensive at the moment.
     db.with_connection { |c| 
         c.exec('create table students (first_name varchar2(20), last_name varchar2(20), age number, address varchar2(20), city varchar2(20))') 
         c.exec("insert into students (first_name, last_name, age, address, city) values ('Lucy', 'Kruskal-Wallis', 30, null, null)") 
-	c.commit
+        c.commit
     }
 
     result = db.query('select sysdate from dual', nil, {:item_format => :array, :amount => :single_value})
