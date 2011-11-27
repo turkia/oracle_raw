@@ -1,10 +1,13 @@
 require 'helper'
 
+$tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'
+$schema = 'scott'
+$password = 'tiger'
+
 class TestOracleRaw < Test::Unit::TestCase
 
 	def connect
-		tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'
-		OracleRaw.new(tnsnames, 'scott', 'tiger', 1, {})
+		OracleRaw.new($tnsnames, $schema, $password)
 	end
 
 	def test_sysdate
@@ -17,6 +20,7 @@ class TestOracleRaw < Test::Unit::TestCase
 		result = db.query(sql, nil, {:item_format => :hash, :amount => :first_row})[:data]['SYSDATE']
 		assert_equal(Time, result.class)
 		result = db.query(sql, nil, {:metadata => :all})
+		assert_equal(result[:exception], nil)
 		assert_equal(1, result[:count])
 		db.close
 	end
@@ -42,12 +46,15 @@ class TestOracleRaw < Test::Unit::TestCase
 		}
 
 		result = db.query('select count(*) count from oracle_raw_test', nil, {:metadata => :all, :item_format => :array, :amount => :single_value})
+		assert_equal(result[:exception], nil)
 		assert(result[:count] == 1 && result[:data] == 3)
 
 		result = db.query('select count(*) count from oracle_raw_test', nil, {:amount => :first_row})
+		assert_equal(result[:exception], nil)
 		assert_equal(result[:count], 1)
 
 		result = db.query('select name from oracle_raw_test where age = :age', [[:age, 30, Integer]], {:metadata => :none, :amount => :all_rows})
+		assert_equal(result[:exception], nil)
 		assert_equal(result[:data][0]['NAME'], 'Kinnie')
 		assert_equal(result[:count], nil)
 
@@ -58,8 +65,12 @@ class TestOracleRaw < Test::Unit::TestCase
 	def test_max_speed_from_pool
 		db = connect
 		start = Time.new; num_calls = 1000
-		num_calls.times do db.query('select 1 from dual') end
-		puts "\nSpeed test: #{num_calls/(Time.new - start)} calls/second.\n"
+		num_calls.times do 
+			result = db.query('select 1 from dual') 
+puts result[:exception].backtrace if result[:exception]
+			assert_equal(result[:exception], nil)
+		end
+		puts "\nSpeed test: pooled: #{num_calls/(Time.new - start)} calls/second.\n"
 		db.close
 	end
 
@@ -67,7 +78,25 @@ class TestOracleRaw < Test::Unit::TestCase
 		db = connect
 		start = Time.new; num_calls = 1000
 		db.with_connection { |c| num_calls.times do c.exec('select 1 from dual') end }
-		puts "\nSpeed test: #{num_calls/(Time.new - start)} calls/second.\n"
+		puts "\nSpeed test: single connection: #{num_calls/(Time.new - start)} calls/second.\n"
+		db.close
+	end
+
+	def test_max_speed_unpooled
+		start = Time.new; num_calls = 100
+		num_calls.times do 
+			c = OCI8.new($schema, $password, $tnsnames)
+			c.exec('select 1 from dual').fetch 
+			c.logoff
+		end
+		puts "\nSpeed test: unpooled: #{num_calls/(Time.new - start)} calls/second.\n"
+	end
+
+	def test_no_metadata
+		db = connect
+		result = db.query('select 1 from dual')
+		assert_equal(result[:exception], nil)
+		assert_equal(result[:count], nil)
 		db.close
 	end
 

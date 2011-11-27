@@ -131,7 +131,7 @@ class OracleRaw
 	# 
 	# If an exception occurs, returns <tt>{ :exception => e }</tt>.
 
-	def query(sqlquery, parameters = nil, options = nil)
+	def query(sqlquery, parameters = [], options = {})
 
 		begin
 			with_connection { |conn|
