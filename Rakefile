@@ -16,7 +16,7 @@ Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "oracle_raw"
   gem.homepage = "http://github.com/opiskelijarekisteri-devel/oracle_raw"
-  gem.license = "MIT"
+  gem.license = "GPLv3"
   gem.summary = %Q{Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections.}
   gem.description = %Q{This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections (http://ruby-oci8.rubyforge.org/en/). Connection pooling is achieved by utilizing ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced).}
   gem.email = "opiskelijarekisteri-devel@helsinki.fi"
