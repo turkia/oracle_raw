@@ -32,7 +32,7 @@ Tests are not comprehensive at the moment.
 
     students_sql = 'select * from students where last_name = :last_name and first_name = :first_name'
     result = db.query(students_sql, [[:last_name, 'Kruskal-Wallis', String], [:first_name, 'Lucy', String]], 
-				    {:item_format => :hash, :amount => :first_row, :metadata => :all})
+                                     {:item_format => :hash, :amount => :first_row, :metadata => :all})
     puts result[:columns] # => ['first_name', 'last_name', 'age', 'address', 'city']
     puts result[:data]['FIRST_NAME'] # => 'Lucy'
 
