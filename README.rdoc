@@ -11,7 +11,7 @@ Tests are not comprehensive at the moment.
 
 == Installation: 
 
-    gem install ruby_oracle_interface
+    gem install oracle_raw
 
 == Usage:
 
@@ -31,8 +31,9 @@ Tests are not comprehensive at the moment.
     puts result[:data].class # => Time
 
     students_sql = 'select * from students where last_name = :last_name and first_name = :first_name'
-    result = db.query(students_sql, [[:last_name, 'Kruskal-Wallis', String], [:first_name, 'Lucy', String]], {:item_format => :hash, :amount => :first_row, :metadata => :all})
-    puts result[:columns] # => ['first_name', 'last_name', 'address', 'city']
+    result = db.query(students_sql, [[:last_name, 'Kruskal-Wallis', String], [:first_name, 'Lucy', String]], 
+				    {:item_format => :hash, :amount => :first_row, :metadata => :all})
+    puts result[:columns] # => ['first_name', 'last_name', 'age', 'address', 'city']
     puts result[:data]['FIRST_NAME'] # => 'Lucy'
 
     db.close
