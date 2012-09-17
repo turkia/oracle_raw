@@ -36,7 +36,8 @@ class TestOracleRaw < Test::Unit::TestCase
 			c.exec("insert into oracle_raw_test (name, age) values ('Lucia', 25)")
 
 			cursor = c.parse('insert into oracle_raw_test (name, age) values (:name, :age)')
-			cursor.bind_parameters([[:name, 'Kinnie', String], [:age, 30, Integer]])
+			cursor.bind_param(:name, 'Kinnie', String)
+			cursor.bind_param(:age, 30, Integer)
 			cursor.exec
 			cursor.close
 
@@ -67,7 +68,7 @@ class TestOracleRaw < Test::Unit::TestCase
 		start = Time.new; num_calls = 1000
 		num_calls.times do 
 			result = db.query('select 1 from dual') 
-			puts result[:exception].backtrace if result[:exception]
+			#puts result[:exception].backtrace if result[:exception]
 			assert_equal(result[:exception], nil)
 		end
 		puts "\nSpeed test: pooled: #{num_calls/(Time.new - start)} calls/second.\n"
@@ -106,5 +107,29 @@ class TestOracleRaw < Test::Unit::TestCase
 		assert(/ORA-00942/ =~ result[:exception].message)
 		db.close
 	end
-end
 
+	def test_bind
+		db = connect
+		id = 10
+		lastname = 'Kruskal-Wallis'
+		q = "select * from students where id = :id"
+
+                db.with_connection { |c|
+
+			cursor = c.parse(q)
+
+			# these should work and do work
+			cursor.bind_param(':id', id, Fixnum)                   
+
+			# these should not work and do not work
+			cursor.bind_param(':id', lastname, Fixnum)         # TypeError; ok
+			assert(/ORA-00942/ =~ result[:exception].message)
+			cursor.bind_param(':lastname', lastname, String)   # OCIError; ok
+			assert(/ORA-00942/ =~ result[:exception].message)
+
+			cursor.close
+		}
+		db.close # clear connection pool
+		true
+	end
+end

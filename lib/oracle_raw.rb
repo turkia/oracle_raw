@@ -1,8 +1,4 @@
 # encoding: UTF-8
-# 
-# Author::    opiskelijarekisteri-devel (mailto:opiskelijarekisteri-devel@helsinki.fi)
-# Copyright:: Copyright (c) 2011 opiskelijarekisteri-devel
-# License::   GNU General Public License, Version 3 (http://www.gnu.org/copyleft/gpl.txt)
 
 require 'oci8'
 
@@ -35,60 +31,18 @@ require 'active_record'
 # This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections (http://ruby-oci8.rubyforge.org/en/).
 # It uses ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced) for connection pooling.
 #
-# At the moment the following methods are implemented:
-# * #query: a general querying method
-# * #with_connection: a method taking a block as an argument; inside the block you can use a raw connection object to execute queries, updates etc.
-#
-# The behaviour of the query method can be controlled with the following options given to initializer, #query or both: 
-# * +:metadata+: if +:all+, returns the number of items in the result set, column names in lower case, and the time and duration of the query. If +:none+, returns only the result set. 
-# * +:item_format+: if +:hash+, query returns the result items as hashes. The default is +:array+, i.e. the items are arrays. 
-# * +:amount+: if +:all_rows+, returns all rows. If +:first_row+, returns only the first row. If +:single_value+, returns only the first value of the first row. +:single_value+ cannot be used if +:item_format+ is +:hash+. Default is to return all rows. 
-#
-# Global options can be changed after initialization.  
-# Options given to #query override global options given to initializer (but not when the option value is nil).
-# 
 # == Installation
 #
 # <tt>gem install oracle_raw</tt>
 #
 # == Usage
 #
-# <tt>tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'</tt>
-#
-# <tt>schema = 'scott'</tt>
-#
-# <tt>password = 'tiger'</tt>
-#
-# <tt>connection_pool_size = 5</tt>
-#
-# <tt>global_options = { :metadata => :all, :item_format => :hash, :amount => :first_row }</tt>
-#
-# <tt>db = OracleRaw.new(tnsnames, schema, password, connection_pool_size, global_options)</tt>
-#
-# <tt>students_sql = 'select * from students where last_name = :last_name' and first_name = :first_name</tt>
-#
-# <tt>last_name = 'Kruskal-Wallis'</tt>
-#
-# <tt>first_name = 'Lucy'</tt>
-#
-# <tt>result = db.query(students_sql, [[:last_name, last_name, String], [:first_name, first_name, String]])</tt>
-#
-# <tt>puts result[:rowcount]</tt>
-#
-# <tt>puts result[:duration]</tt>
-#
-# <tt>result = db.query(students_sql, [[:last_name, last_name, String, 50], [:first_name, first_name, String, 50]], { :metadata => :none, :item_format => :array })</tt>
-#
-# <tt>puts result[:data]</tt>
+# Consult the README. 
 # 
-# <tt>sysdate_sql = 'select sysdate from dual'</tt>
+# == Additional information
 #
-# <tt>puts db.query(sysdate_sql, nil, { :metadata => :none, :amount => :single_value})[:data]</tt>
-#
-# <tt>puts db.with_connection { |c| (c.exec(sysdate_sql).fetch)[0] }</tt>
-#
-#--
 # ActiveRecord and ConnectionPool documentation:
+#
 # * http://ar.rubyonrails.org/
 # * http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/ConnectionPool.html
 
@@ -123,58 +77,54 @@ class OracleRaw
 		ActiveRecord::Base.connection_pool.with_connection { |conn| yield conn.raw_connection }
 	end
 
-	# Depending whether the +:metadata+ option is +:all+ or +:none+, returns either of the following:
+	# Depending whether the +:metadata+ option is +:none+ or +:all+, returns either a plain result set or a map of the following kind:
 	#
 	# <tt>{ :count => rowcount, :columns => colnames, :data => data, :date => date, :duration => duration }</tt>
-	#
-	# <tt>{ :data => data }</tt>
 	# 
-	# If an exception occurs, returns <tt>{ :exception => e }</tt>.
+	# Exception are propagated to the caller.
 
 	def query(sqlquery, parameters = [], options = {})
 
-		begin
-			with_connection { |conn|
+		with_connection { |conn|
 
-				starttime = Time.new; data = []
+			starttime = Time.new; data = []
 
-				cursor = conn.parse(sqlquery)
-				cursor.bind_parameters(parameters) if parameters
-				cursor.exec_with_prefetch(5000)
+			cursor = conn.parse(sqlquery)
+			cursor.bind_parameters(parameters) if parameters
+			cursor.exec_with_prefetch(5000)
 
-				case options[:item_format] || @global_options[:item_format]
+			case options[:item_format] || @global_options[:item_format]
 
-					when :hash then
+				when :hash then
 
-						case options[:amount] || @global_options[:amount]
+					case options[:amount] || @global_options[:amount]
 
-							when :first_row then data = cursor.fetch_hash()
-							else while r = cursor.fetch_hash(); data << r;  end 
-						end
-					else 
-						case options[:amount] || @global_options[:amount]
+						when :first_row then data = cursor.fetch_hash()
+						else while r = cursor.fetch_hash(); data << r;  end 
+					end
+				else 
+					case options[:amount] || @global_options[:amount]
 
-							when :single_value then temp = cursor.fetch(); data = (temp ? temp[0] : nil)
-							when :first_row then data = cursor.fetch()
-							else while r = cursor.fetch(); data << r; end
-						end
-				end
+						when :single_value then temp = cursor.fetch(); data = (temp ? temp[0] : nil)
+						when :first_row then data = cursor.fetch()
+						else while r = cursor.fetch(); data << r; end
+					end
+			end
 
-				case options[:metadata] || @global_options[:metadata]
+			case options[:metadata] || @global_options[:metadata]
 
-					when :all then
-						colnames = cursor.get_col_names.each do |n| n.downcase! end 
-						rowcount = cursor.row_count
-						cursor.close
-						{:count => rowcount, :columns => colnames, :data => data, :date => starttime, :duration => Time.new - starttime}
-					else	
-						cursor.close
-						{:data => data}
-				end
-			}
-		rescue => e
-			{:exception => e}
-		end
+				when :all then
+					colnames = cursor.get_col_names.each do |n| n.downcase! end 
+					rowcount = cursor.row_count
+					cursor.close
+					{:count => rowcount, :columns => colnames, :data => data, :date => starttime, :duration => Time.new - starttime}
+				when :plain then
+					cursor.close
+					data
+				else	
+					cursor.close
+					{:data => data}
+			end
+		}
 	end
 end
-
