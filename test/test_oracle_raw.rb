@@ -67,7 +67,7 @@ class TestOracleRaw < Test::Unit::TestCase
 		start = Time.new; num_calls = 1000
 		num_calls.times do 
 			result = db.query('select 1 from dual') 
-puts result[:exception].backtrace if result[:exception]
+			puts result[:exception].backtrace if result[:exception]
 			assert_equal(result[:exception], nil)
 		end
 		puts "\nSpeed test: pooled: #{num_calls/(Time.new - start)} calls/second.\n"
