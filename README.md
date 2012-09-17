@@ -2,54 +2,93 @@
 
 This is a library for interfacing with an Oracle Database. It uses ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced) for connection pooling, but otherwise a raw Ruby-OCI8 connection (http://ruby-oci8.rubyforge.org/en/) is used. 
 
-At the moment the following methods are implemented: 
-
-- a general querying method
-- a _with_connection_ method, that takes a block as an argument. inside the block you can use a raw OCI8 connection object to execute queries, updates etc.
-
-Tests are not comprehensive at the moment. 
-
 == Installation: 
 
-    gem install oracle_raw
-
+```bash
+gem install oracle_raw
+```
 == Usage:
 
-    tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'
-    schema = 'scott'
-    password = 'tiger'
-    connection_pool_size = 5
+At the moment the following methods are implemented:
 
-    db = OracleDB.new(tnsnames, schema, password, connection_pool_size)
-    db.with_connection { |c| 
-        c.exec('create table students (first_name varchar2(20), last_name varchar2(20), age number, address varchar2(20), city varchar2(20))') 
-        c.exec("insert into students (first_name, last_name, age, address, city) values ('Lucy', 'Kruskal-Wallis', 30, null, null)") 
-        c.commit
-    }
+* `query`: a general querying method
+* `with_connection`: a method taking a block as an argument; inside the block you can use a raw connection object to execute queries, updates etc.
 
-    result = db.query('select sysdate from dual', nil, {:item_format => :array, :amount => :single_value})
-    puts result[:data].class # => Time
+Connect to a database and create a pool of five connections:
 
-    students_sql = 'select * from students where last_name = :last_name and first_name = :first_name'
-    result = db.query(students_sql, [[:last_name, 'Kruskal-Wallis', String], [:first_name, 'Lucy', String]], 
-                                     {:item_format => :hash, :amount => :first_row, :metadata => :all})
-    puts result[:columns] # => ['first_name', 'last_name', 'age', 'address', 'city']
-    puts result[:data]['FIRST_NAME'] # => 'Lucy'
+```ruby
+tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'
+schema = 'scott'
+password = 'tiger'
+connection_pool_size = 5
 
-    db.close
+db = OracleRaw.new(tnsnames, schema, password, connection_pool_size)
+```
 
-== Contributing to ruby_oracle_interface
- 
-* Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
-* Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it
-* Fork the project
-* Start a feature/bugfix branch
-* Commit and push until you are happy with your contribution
-* Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
-* Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
+Get a connection from the pool and do something with it: 
+
+```ruby
+db.with_connection { |c| 
+	c.exec('create table names (id number, name varchar2(50))') 
+	c.exec("insert into names (id, name) values (1, 'Paul')") 
+	c.exec("insert into names (id, name) values (2, 'Maria')")
+	c.commit
+}
+```
+
+Use query method (handles connection internally).
+
+1. Without parameters:
+
+```ruby
+db.query('select name from names')
+```
+
+Result: 
+
+```ruby
+{:data=>[["Paul"], ["Maria"]]}
+```
+
+2. With parameters: 
+
+```ruby
+db.query('select name from names where id = :id', [[:id, 1, Integer]])
+```
+
+Result: 
+
+```ruby
+{:data=>[["Paul"]]}
+```
+
+3. With options: 
+
+The behaviour of the query method can be controlled with the following options given to initializer, #query or both: 
+* `:metadata`: if `:all`, returns the number of items in the result set, column names in lower case, and the time and duration of the query. If `:none`, returns only the result set. 
+* `:item_format`: if `:hash`, query returns the result items as hashes. The default is `:array`, i.e. the items are arrays. 
+* `:amount`: if `:all_rows`, returns all rows. If `:first_row`, returns only the first row. If `:single_value`, returns only the first value of the first row. `:single_value` cannot be used if `:item_format` is `:hash`. Default is to return all rows. 
+
+Global options can be changed after initialization.  
+Options given to #query override global options given to initializer (but not when the option value is nil).
+
+```ruby
+db.query('select name from names', nil, {:item_format => :hash})
+=> {:data=>[{"NAME"=>"Paul"}, {"NAME"=>"Maria"}]}
+
+db.query('select name from names', nil, {:item_format => :array})
+=> {:data=>[["Paul"], ["Maria"]]}
+
+db.query('select name from names', nil, {:metadata => :all})
+=> {:count=>2, :columns=>["name"], :data=>[["Paul"], ["Maria"]], :date=>2012-09-17 15:53:46 `0300, :duration=>0.0016196}
+```
+
+Close the connection pool: 
+
+```ruby
+db.close
+```
 
 == Copyright
 
-Copyright (c) 2011 opiskelijarekisteri-devel. See LICENSE.txt for
-further details.
-
+Copyright (c) 2011 opiskelijarekisteri-devel. License: LGPLv3. See LICENSE.txt for further details.
