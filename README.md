@@ -45,24 +45,14 @@ Use query method (handles connection internally). Without parameters:
 
 ```ruby
 db.query('select name from names')
-```
-
-Result: 
-
-```ruby
-{:data=>[["Paul"], ["Maria"]]}
+=> {:data=>[["Paul"], ["Maria"]]}
 ```
 
 Query with parameters: 
 
 ```ruby
 db.query('select name from names where id = :id', [[:id, 1, Integer]])
-```
-
-Result: 
-
-```ruby
-{:data=>[["Paul"]]}
+=> {:data=>[["Paul"]]}
 ```
 
 Query with options: the behaviour of the query method can be controlled with the following options given to initializer, #query or both: 
