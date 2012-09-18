@@ -25,11 +25,7 @@ class OCI8::Cursor
 end
 
 
-require 'active_record'
-
-
-# This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections (http://ruby-oci8.rubyforge.org/en/).
-# It uses ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced) for connection pooling.
+# This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 connections (http://ruby-oci8.rubyforge.org/en/).
 #
 # == Installation
 #
@@ -38,13 +34,6 @@ require 'active_record'
 # == Usage
 #
 # Consult the README. 
-# 
-# == Additional information
-#
-# ActiveRecord and ConnectionPool documentation:
-#
-# * http://ar.rubyonrails.org/
-# * http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/ConnectionPool.html
 
 class OracleRaw
 
@@ -53,35 +42,48 @@ class OracleRaw
 	attr_accessor :global_options
 
 	# Establishes a connection with the given connection parameters, and sets global options. 
+	# Pool_size is included for backward compatibility and may be ignored if pool settings are specified in global_options. 
+	# Example: {:min_pool_size => 4, :pool_increment => 2, :max_pool_size => 10}
 	# 
 	# <tt>tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'</tt>
 
-	def initialize(tnsnames, schema, password, pool_size = 1, global_options = {})
-		ActiveRecord::Base.establish_connection(:adapter  => "oracle_enhanced", 
-							:username => schema, :password => password, 
-							:database => tnsnames, :pool => pool_size)
+	def initialize(tnsnames, schema, password, pool_size = 1, global_options = {:min_pool_size => pool_size, :pool_increment => 0, :max_pool_size => pool_size})
+		@schema = schema; @password = password
 		@global_options = global_options 
+		@pool = OCI8::ConnectionPool.new(global_options[:min_pool_size], global_options[:max_pool_size], global_options[:pool_increment], schema, password, tnsnames)
 	end
 
 	# Closes all connections in the connection pool. 
 
 	def close
-		ActiveRecord::Base.connection_pool.disconnect!
+		@pool.destroy
 	end
 
 	# Yields a raw connection to the block argument. Example: 
 	# 
-	# <tt>db.with_connection { |c| c.exec("insert into students (last_name, first_name) values ('Kruskal-Wallis', 'Lucy')") }</tt>
+	# <tt>db.with_connection { |c| c.exec("insert into names (id, name) values (1, 'Paul')") }</tt>
 
 	def with_connection
-		ActiveRecord::Base.connection_pool.with_connection { |conn| yield conn.raw_connection }
+		begin
+			c = OCI8.new(@schema, @password, @pool)
+			yield c
+		ensure
+			c.logoff
+		end
 	end
 
-	# Depending whether the +:metadata+ option is +:none+ or +:all+, returns either a plain result set or a map of the following kind:
+	# Executes given sql query. If parameters are given, binds them first. 
+	#
+	# Example: 
+	# db.query('select * from names where id = :id and name = :name', [[:id, id, Integer, 2], [:name, name, String, 50]])
+	#
+	# The default return format for query results is to wrap result set in { :data => data }.
+	# If a +:metadata+ option is set to +:plain+ or +:all+, returns either a plain result set with no wrapper, 
+	# or a wrapped result set enhanced with additional information as follows: 
 	#
 	# <tt>{ :count => rowcount, :columns => colnames, :data => data, :date => date, :duration => duration }</tt>
 	# 
-	# Exception are propagated to the caller.
+	# Exceptions are propagated to the caller.
 
 	def query(sqlquery, parameters = [], options = {})
 
