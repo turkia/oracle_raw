@@ -1,8 +1,6 @@
 require 'helper'
 
-$tnsnames = '(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521)) (CONNECT_DATA = (SERVER = DEDICATED) (SID = TEST)))'
-$schema = 'scott'
-$password = 'tiger'
+require_relative 'db-config'
 
 class TestOracleRaw < Test::Unit::TestCase
 
@@ -65,7 +63,7 @@ class TestOracleRaw < Test::Unit::TestCase
 
 	def test_max_speed_from_pool
 		db = connect
-		start = Time.new; num_calls = 1000
+		start = Time.new; num_calls = 100
 		num_calls.times do 
 			result = db.query('select 1 from dual') 
 			#puts result[:exception].backtrace if result[:exception]
@@ -77,7 +75,7 @@ class TestOracleRaw < Test::Unit::TestCase
 
 	def test_max_speed_one_connection
 		db = connect
-		start = Time.new; num_calls = 1000
+		start = Time.new; num_calls = 100
 		db.with_connection { |c| num_calls.times do c.exec('select 1 from dual') end }
 		puts "\nSpeed test: single connection: #{num_calls/(Time.new - start)} calls/second.\n"
 		db.close
@@ -103,8 +101,12 @@ class TestOracleRaw < Test::Unit::TestCase
 
 	def test_exception
 		db = connect
-		result = db.query('select * from oracle_raw_test_nonexistent', nil, nil)
-		assert(/ORA-00942/ =~ result[:exception].message)
+		begin
+			db.query('select * from oracle_raw_test_nonexistent', nil, nil)
+			raise "nonexistent table did not raise an exception."
+		rescue => e
+			assert(/ORA-00942/ =~ e.message)
+		end
 		db.close
 	end
 
@@ -118,15 +120,16 @@ class TestOracleRaw < Test::Unit::TestCase
 
 			cursor = c.parse(q)
 
-			# these should work and do work
+			# this should work
 			cursor.bind_param(':id', id, Fixnum)                   
 
-			# these should not work and do not work
-			cursor.bind_param(':id', lastname, Fixnum)         # TypeError; ok
-			assert(/ORA-00942/ =~ result[:exception].message)
-			cursor.bind_param(':lastname', lastname, String)   # OCIError; ok
-			assert(/ORA-00942/ =~ result[:exception].message)
-
+			# this should not work
+			begin
+				cursor.bind_param(':id', lastname, Fixnum) 
+			rescue => e
+				# TypeError
+				assert(/expect Numeric but String/ =~ e.message, 'test_bind failed')
+			end
 			cursor.close
 		}
 		db.close # clear connection pool
