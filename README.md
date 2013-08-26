@@ -90,4 +90,4 @@ db.close
 Copyright
 =========
 
-Copyright (c) 2011 opiskelijarekisteri-devel. License: LGPLv3. See LICENSE.txt for further details.
+Copyright (c) 2011-2013 opiskelijarekisteri-devel. License: LGPLv3. See LICENSE.txt for further details.
