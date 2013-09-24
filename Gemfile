@@ -1,8 +1,8 @@
 source "http://rubygems.org"
 
 gem "ruby-oci8", ">= 2.1.5"
-gem "activerecord", "= 3.2.12"
-gem 'activerecord-oracle_enhanced-adapter', "= 1.4.1"
+gem "activerecord", "~> 3.2"
+gem 'activerecord-oracle_enhanced-adapter', "~> 1.4"
 
 group :development do
   gem "builder", "~> 3.0.0"
