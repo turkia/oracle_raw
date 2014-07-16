@@ -12,8 +12,14 @@ class OCI8::Cursor
 	# The first value is the name given in the sql string, the second is the value to be bound,
 	# the third is the type of the value, and the fourth is the maximum length of the value. 
 
-        def bind_parameters(params)
-		params.each do |p| self.bind_param(p[0], p[1], p[2], p[3]) end if params
+	def bind_parameters(params)
+		params.each do |p|
+			if p[1].is_a?(Array)
+				self.bind_param_array(p[0], p[1], p[2], p[3])
+			else
+				self.bind_param(p[0], p[1], p[2], p[3])
+			end
+		end if params
 	end
 
 	# This method performs exec and prefetch. 
@@ -90,6 +96,7 @@ class OracleRaw
 			starttime = Time.new; data = []
 
 			cursor = conn.parse(sqlquery)
+			cursor.max_array_size = 100
 			cursor.bind_parameters(parameters) if parameters
 			cursor.exec_with_prefetch(5000)
 
