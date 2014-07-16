@@ -1,16 +1,7 @@
-# rcov generated
-coverage
-
-# rdoc generated
-rdoc
-
-# yard generated
-doc
-.yardoc
 .bundle
-pkg
 .DS_Store
 *.swp
+doc
+pkg
 Gemfile.lock
-old
 test/db-config.rb
