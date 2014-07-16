@@ -2,7 +2,7 @@ require_relative 'helper'
 
 require_relative 'db-config'
 
-class TestOracleRaw < Test::Unit::TestCase
+class TestOracleRaw < MiniTest::Test
 
 	def connect
 		OracleRaw.new($tnsnames, $schema, $password)
