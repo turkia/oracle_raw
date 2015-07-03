@@ -18,7 +18,7 @@ Jeweler::Tasks.new do |gem|
   gem.homepage = "http://github.com/turkia/oracle_raw"
   gem.license = "LGPLv3"
   gem.summary = %Q{Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections.}
-  gem.description = %Q{This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections (http://ruby-oci8.rubyforge.org/en/). Connection pooling is achieved by utilizing ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced).}
+  gem.description = %Q{This is a Ruby library for interfacing with an Oracle Database using pooled OCI8 raw connections (http://ruby-oci8.rubyforge.org/en/).}
   gem.email = "opiskelijarekisteri-devel@helsinki.fi"
   gem.authors = ["turkia"]
   # dependencies defined in Gemfile
