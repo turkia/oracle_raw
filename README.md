@@ -1,7 +1,7 @@
 oracle_raw
 ==========
 
-This is a library for interfacing with an Oracle Database. It uses ActiveRecord Oracle Enhanced adapter (https://github.com/rsim/oracle-enhanced) for connection pooling, but otherwise a raw Ruby-OCI8 connection (http://ruby-oci8.rubyforge.org/en/) is used. 
+This is a library for interfacing with an Oracle Database. It uses Ruby-OCI8 (http://ruby-oci8.rubyforge.org/en/) for connection pooling which is considerably slower than ActiveRecord pooling. 
 
 Installation 
 ============
